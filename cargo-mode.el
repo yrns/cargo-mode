@@ -10,7 +10,11 @@
 
 (define-derived-mode cargo-mode toml-mode "Cargo"
   "Major mode for Cargo.toml files."
-  (add-to-list 'flycheck-checkers 'cargo))
+  )
+
+;; Order matters for chained checkers?
+(add-to-list 'flycheck-checkers 'cargo-upgrade)
+(add-to-list 'flycheck-checkers 'cargo)
 
 (add-to-list 'auto-mode-alist '("Cargo\\.toml\\'" . cargo-mode))
 
@@ -25,7 +29,20 @@
                     (message)) "\n")))
   ;; Most cargo errors don't have line numbers.
   :error-filter flycheck-fill-empty-line-numbers
-  :modes (cargo-mode)
+  :next-checkers ((warning . cargo-upgrade))
+  :modes cargo-mode
+  :standard-input nil)
+
+(flycheck-define-checker cargo-upgrade
+  "Cargo upgrade checker."
+  ;; TODO: make sure it's installed
+  :command ("cargo" "upgrade" "--dry-run")
+  :error-parser flycheck-parse-with-patterns-without-color
+  :error-patterns
+  ((info line-start (one-or-more " ") "Upgrading " (message) line-end))
+  ;; TODO: remap crate to line
+  :error-filter flycheck-fill-empty-line-numbers
+  :modes cargo-mode
   :standard-input nil)
 
 (provide 'cargo-mode)
